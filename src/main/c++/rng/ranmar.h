@@ -119,7 +119,7 @@ class Ranmar: public virtual Random {
      *          [0,n-1] if n>0, or
      *          [n+1,0] if n<0
      *
-     * Note: |n| < 2^32 
+     * Note: |n| < 2^24 
      */
     int next_int(const int &n) {
         return static_cast<int>( static_cast<float>(n)*next() );

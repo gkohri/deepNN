@@ -39,8 +39,9 @@ int main ( int argc, char *argv[] ) {
     const float lambda = 1.0e-6;
     const float learning_rate = 10.0;
     const float momentum = 8.00;
-    const int learn_steps = 120;
+    const int learn_steps = 7680;
     const int seed = 17439073;
+    const int num_nets = 1;
 
     const string train_data_file   = "data/train-images-idx3-ubyte";
     const string train_labels_file = "data/train-labels-idx1-ubyte";
@@ -90,48 +91,87 @@ int main ( int argc, char *argv[] ) {
 
     int num_mini_batch = mini_batch_inputs.size();
 
+    vector<DNN2<float>*> nets;
+
     vector<int> schedule;
     for ( int i = 0; i < num_mini_batch; ++i ) schedule.push_back(i); 
 
-    DNN2<float> dnn( size_in, size_h1, size_out );
-    //DNN3<float> dnn( size_in, size_h1, size_h2, size_out );
+    for ( int n = 0; n < num_nets; ++n ) {
+        DNN2<float> *dnn = new DNN2<float>( size_in, size_h1, size_out );
+        //DNN3<float> dnn( size_in, size_h1, size_h2, size_out );
 
-    dnn.init( rng );
+        dnn->init( rng );
 
-    float loss = 0.0;
-    float val_loss = 0.0;
-    float val_error = 0.0;
-    float var_lr = learning_rate;
+        float loss = 0.0;
+        float val_loss = 0.0;
+        float val_error = 0.0;
+        float var_lr = learning_rate;
 
-    rng::shuffle( schedule.begin(), schedule.end(), rand );
+        rng::shuffle( schedule.begin(), schedule.end(), rand );
 
-    int mb_count = 0;
-    for ( int step = 0; step < learn_steps; ++step ) {
-        int mb = schedule[mb_count];
-        loss = dnn.back_prop( var_lr, momentum, lambda,
+        int mb_count = 0;
+        for ( int step = 0; step < learn_steps; ++step ) {
+            int mb = schedule[mb_count];
+            loss = dnn->back_prop( var_lr, momentum, lambda,
                                   mini_batch_inputs[mb], 
                                   mini_batch_outputs[mb] );
-
-            val_error = dnn.error( mini_batch_inputs[mb], 
+/*
+            val_error = dnn->error( mini_batch_inputs[mb], 
                                     mini_batch_outputs[mb] ); 
-
             if ( step % 100 == 0 ) {
-                val_error = dnn.error( val_inputs, val_outputs ); 
+                val_error = dnn->error( val_inputs, val_outputs ); 
             }
             fprintf(stdout,"%4d  %f %f\n", step, loss, val_error );
-
+*/
+            fprintf(stdout,"%4d  %f\n", step+n*learn_steps, loss );
             ++mb_count;
             if ( mb_count == num_mini_batch ) {
                 mb_count = 0;
                 rng::shuffle( schedule.begin(), schedule.end(), rand ); 
             }
+        }
+
+        nets.push_back( dnn );
     }
 
+    int out_rows = val_outputs.rows();
+    int out_cols = val_outputs.cols();
+    Matrix<float,Dynamic,Dynamic> sd_probs;
+    Matrix<float,Dynamic,Dynamic> net_probs;
+
+    sd_probs.resize( out_rows, out_cols );
+    net_probs.resize( out_rows, out_cols );
+
+    sd_probs.setZero(out_rows,out_cols);
+
+    for ( int n = 0; n < num_nets; ++n ) {
+        (nets[n])->classify( val_inputs, net_probs );
+        sd_probs += net_probs;
+    }
+
+    Matrix<float,1,Dynamic> col_max = sd_probs.colwise().maxCoeff();
+
+    double error = 0;
+    for ( int p = 0; p < out_cols; ++p ) {
+        for ( int r = 0; r < out_rows; ++r ) {
+            if ( val_outputs(r,p) == 1 ) {
+                if ( sd_probs(r,p) < col_max(0,p) ) {
+                        error += 1.0;
+                }
+                break;
+            }
+        }
+    }
+
+    error /= static_cast<double>( out_cols );
+
+/*
     val_loss = dnn.loss( val_inputs, val_outputs, 0.0 ); 
     fprintf(stdout,"#final val: loss %f\n", val_loss);
-
-    val_error = dnn.error( val_inputs, val_outputs );
+    val_error = dnn.error( val_inputs, val_outputs ); 
     fprintf(stdout,"#final valdation: error %f\n", val_error);
+*/
 
+    fprintf(stdout,"#sd valdation error %f\n", error);
 
 }

@@ -24,15 +24,16 @@ def options(opt):
 #  but we need to decide on the course of action when these libraries are not
 #  present.)
 #
+#        cnf.env.append_unique('CXXFLAGS', ['-O2', '-g', '-DNDEBUG', '-fopenmp',
 def configure(cnf):
         cnf.check_waf_version(mini='1.6.7')
         cnf.load('compiler_cxx doxygen')
-        cnf.env.append_unique('CXXFLAGS', ['-O2', '-g', 
+        cnf.env.append_unique('CXXFLAGS', ['-O2', '-g', '-DNDEBUG', '-fopenmp',
                     '-std=c++0x', '-Wall','-mtune=native','-march=native'])
+        cnf.env.append_unique('LINKFLAGS', ['-fopenmp'])
         cnf.check_cxx(lib=['m'], uselib_store='M')
         cnf.check_cxx(lib=['rt'], uselib_store='M')
         cnf.check_cxx(lib=['stdc++'], uselib_store='M')
-        cnf.check_cxx(lib=['pthread'], uselib_store='M')
         cnf.define('APPNAME',APPNAME)
         cnf.define('VERSION',VERSION)
         cnf.write_config_header('config.h')
@@ -42,10 +43,17 @@ def configure(cnf):
 # Build the project
 #
 def build(bld):
-        srcs = bld.path.ant_glob('src/main/c++/**/*.cc',src='true',bld='true')
+        srcs = bld.path.ant_glob('src/main/c++/**/*.cc',src='true',
+                                 excl='src/main/c++/**/ensemble.cc',bld='true')
         bld(features='cxx cxxprogram',source=srcs,
             includes = ['.', 'src/main/c++'],
-            target=APPNAME, use=['M'])
+            target="denn", use=['M'])
+
+        srcs2 = bld.path.ant_glob('src/main/c++/**/*.cc',src='true',
+                                 excl='src/main/c++/**/main.cc',bld='true')
+        bld(features='cxx cxxprogram',source=srcs2,
+            includes = ['.', 'src/main/c++'],
+            target="ensemble", use=['M'])
 
 #
 # Build a distribution
