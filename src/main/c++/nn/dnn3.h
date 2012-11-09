@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Eigen/Dense"
-#include "rng/rng.h"
+#include "rng/normal.h"
 #include "math/math.h"
 
 namespace nn {
@@ -39,26 +39,26 @@ class DNN3 {
 
     ~DNN3(){}
 
-    void init( rng::RNG<T> &rand) {
+    void init( rng::Normal &rand) {
 
         for ( int i = 0; i < size_h1; ++i ) {
             T norm = static_cast<T>( 1.0/sqrt( static_cast<double>(size_in) ));
             for ( int j = 0; j < size_in; ++j ) {
-                w_ih1(i,j) = norm*(1.0 - 2.0*rand.next());
+                w_ih1(i,j) = norm*rand.next();
             }
         }
 
         for ( int i = 0; i < size_h2; ++i ) {
             T norm = static_cast<T>( 1.0/sqrt( static_cast<double>(size_h1) ));
             for ( int j = 0; j < size_h1; ++j ) {
-                w_h1h2(i,j) = norm*(1.0 - 2.0*rand.next());
+                w_h1h2(i,j) = norm*rand.next();
             }
         }
 
         for ( int i = 0; i < size_out; ++i ) {
             T norm = static_cast<T>( 1.0/sqrt( static_cast<double>(size_h2) ));
             for ( int j = 0; j < size_h2; ++j ) {
-                w_h2o(i,j) = norm*(1.0 - 2.0*rand.next());
+                w_h2o(i,j) = norm*rand.next();
             }
         }
 
@@ -136,7 +136,6 @@ class DNN3 {
                          w_h1h2.squaredNorm() +
                          w_h2o.squaredNorm()    )*0.5*lambda;
 
-
         class_out = class_out.unaryExpr( math::fexp<T>() );
 
         Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> error_deriv_o = 
@@ -159,13 +158,13 @@ class DNN3 {
         Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> grad_ih1 = 
             lambda*w_ih1  + norm*error_deriv_h1*inputs.transpose();
 
-        w_h2o_mom = (momentum/sqrt(w_h2o.cols()))*w_h2o_mom - grad_h2o;
-        w_h1h2_mom = (momentum/sqrt(w_h1h2.cols()))*w_h1h2_mom - grad_h1h2;
-        w_ih1_mom = (momentum/sqrt(w_ih1.cols()))*w_ih1_mom - grad_ih1;
+        w_h2o_mom  = momentum*w_h2o_mom  - grad_h2o;
+        w_h1h2_mom = momentum*w_h1h2_mom - grad_h1h2;
+        w_ih1_mom  = momentum*w_ih1_mom  - grad_ih1;
 
-        w_h2o += (learning_rate/sqrt(w_h2o.cols()))*w_h2o_mom;
+        w_h2o  += (learning_rate/sqrt(w_h2o.cols()))*w_h2o_mom;
         w_h1h2 += (learning_rate/sqrt(w_h1h2.cols()))*w_h1h2_mom;
-        w_ih1 += (learning_rate/sqrt(w_ih1.cols()))*w_ih1_mom;
+        w_ih1  += (learning_rate/sqrt(w_ih1.cols()))*w_ih1_mom;
 
         return total_loss;
     }

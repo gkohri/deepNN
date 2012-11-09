@@ -7,7 +7,6 @@
 #include "nn/dnn2.h"
 #include "nn/dnn3.h"
 #include "rng/mt_19937.h"
-#include "rng/rng.h"
 #include "rng/random.h"
 #include "util/timer.h"
 #include "util/mnist.h"
@@ -18,7 +17,6 @@ using nn::DNN2;
 using nn::DNN3;
 using rng::MT_19937;
 using rng::Random;
-using rng::RNG;
 using std::string;
 using std::vector;
 using util::MNIST;
@@ -74,8 +72,6 @@ int main ( int argc, char *argv[] ) {
 
     MT_19937 rand(seed);
 
-    RNG<float> rng( &rand );
-
     vector<Matrix<float,Dynamic,Dynamic>> mini_batch_inputs;
     vector<Matrix<float,Dynamic,Dynamic>> mini_batch_outputs;
 
@@ -100,11 +96,9 @@ int main ( int argc, char *argv[] ) {
         DNN2<float> *dnn = new DNN2<float>( size_in, size_h1, size_out );
         //DNN3<float> dnn( size_in, size_h1, size_h2, size_out );
 
-        dnn->init( rng );
+        dnn->init( rand );
 
         float loss = 0.0;
-        float val_loss = 0.0;
-        float val_error = 0.0;
         float var_lr = learning_rate;
 
         rng::shuffle( schedule.begin(), schedule.end(), rand );
@@ -164,13 +158,6 @@ int main ( int argc, char *argv[] ) {
     }
 
     error /= static_cast<double>( out_cols );
-
-/*
-    val_loss = dnn.loss( val_inputs, val_outputs, 0.0 ); 
-    fprintf(stdout,"#final val: loss %f\n", val_loss);
-    val_error = dnn.error( val_inputs, val_outputs ); 
-    fprintf(stdout,"#final valdation: error %f\n", val_error);
-*/
 
     fprintf(stdout,"#sd valdation error %f\n", error);
 

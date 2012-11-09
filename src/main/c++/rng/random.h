@@ -40,7 +40,7 @@ void shuffle ( RandomAccessIterator first, RandomAccessIterator last,
                         Random &rand ) {
     typename std::iterator_traits<RandomAccessIterator>::difference_type i, n;
     n = (last-first);
-    for (i=n-1; i>0; --i) std::swap( first[i], first[rand.next_int(i+1)] );
+    for (i = n-1; i > 0; --i) std::swap( first[i], first[rand.next_int(i+1)] );
 }
 
 }  // namespace rng

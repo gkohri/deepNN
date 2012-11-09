@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "Eigen/Dense"
-#include "rng/rng.h"
+#include "rng/normal.h"
 #include "math/math.h"
 
 namespace nn {
@@ -33,19 +33,19 @@ class DNN2 {
 
     ~DNN2(){};
 
-    void init( rng::RNG<T> &rand) {
+    void init( rng::Normal &rand) {
 
         for ( int i = 0; i < size_h1; ++i ) {
-            T norm = static_cast<T>( 1.0/sqrt( static_cast<double>(size_in) ));
+            T norm = static_cast<T>( 1.0/sqrt(static_cast<double>(size_in)));
             for ( int j = 0; j < size_in; ++j ) {
-                w_ih(i,j) = norm*(1.0 - 2.0*rand.next());
+                w_ih(i,j) = norm*rand.next();
             }
         }
 
         for ( int i = 0; i < size_out; ++i ) {
-            T norm = static_cast<T>( 1.0/sqrt( static_cast<double>(size_out) ));
+            T norm = static_cast<T>( 1.0/sqrt(static_cast<double>(size_h1)));
             for ( int j = 0; j < size_h1; ++j ) {
-                w_ho(i,j) = norm*(1.0 - 2.0*rand.next());
+                w_ho(i,j) = norm*rand.next();
             }
         }
 
@@ -88,7 +88,7 @@ class DNN2 {
         return total_loss;
     }
 
-    // The back-propogation algorithm for a 3-layer network
+    // The back-propogation algorithm for a 2-layer network
     template<typename DerivedA, typename DerivedB>
     T back_prop( const T &learning_rate, const T &momentum, const T &lambda,
                  const Eigen::MatrixBase<DerivedA>& inputs,
@@ -113,7 +113,6 @@ class DNN2 {
         T total_loss = -class_out.cwiseProduct( targets ).sum()*norm + 
                        ( w_ih.squaredNorm() + w_ho.squaredNorm() )*0.5*lambda;
 
-
         class_out = class_out.unaryExpr( math::fexp<T>() );
 
         Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> error_deriv_o = 
@@ -129,8 +128,8 @@ class DNN2 {
         Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> grad_ih = 
             lambda*w_ih  + norm*(error_deriv_h*inputs.transpose());
 
-        w_ho_mom = (momentum/sqrt(w_ho.cols()))*w_ho_mom - grad_ho;
-        w_ih_mom = (momentum/sqrt(w_ih.cols()))*w_ih_mom - grad_ih;
+        w_ho_mom = momentum*w_ho_mom - grad_ho;
+        w_ih_mom = momentum*w_ih_mom - grad_ih;
 
         w_ho += (learning_rate/sqrt(w_ho.cols()))*w_ho_mom;
         w_ih += (learning_rate/sqrt(w_ih.cols()))*w_ih_mom;

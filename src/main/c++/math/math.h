@@ -1,35 +1,41 @@
-//========================================================================
-// Header file for including some non-standard math functions in C++
-//========================================================================
 
 #ifndef _EXTENED_MATH_H
 #define _EXTENED_MATH_H
 
 #include <cmath>
+#include <functional>
 
 namespace math {
 
+// Define some non-standard functions of used in statistical physics
+
 // Some sigmoidal type functions:
 
-// ...Step function
+// ...the theta function (also called the step function)
 
-inline double step(const double &b) { return  ( b > 0.0 ? 1.0 : 0.0 ); }
-
-inline float  step(const float  &b) 
-			    {return  ( b > (float) 0.0 ? (float) 1.0 : (float) 0.0 ); }
-
-inline int    step(const int    &b) { return  ( b > 0   ? 1   : 0   ); }
+template <typename Scalar>
+struct theta : public std::binary_function<Scalar,Scalar,Scalar> {
+    inline const Scalar operator()(const Scalar &x, Scalar b = 0) const {
+        return ( x >= b ? (Scalar) 1 : (Scalar) 0 );
+    }
+};
 
 // ...signum function
 
-inline double signum(const double &b) { return  ( b > 0.0 ? 1.0 : -1.0 ); }
-inline float  signum(const float  &b) { return  ( b > 0.0 ? 1.0 : -1.0 ); }
-inline int    signum(const int    &b) { return  ( b > 0   ? 1   : -1   ); }
+template <typename Scalar>
+struct signum : public std::binary_function<Scalar,Scalar,Scalar> {
+    inline const Scalar operator()(const Scalar &x, Scalar b = 0) const {
+        if ( x == (Scalar) b ) 
+            return 0;
+        else 
+            return ( x > b ? (Scalar) 1 : (Scalar) -1 );
+    }
+};
 
 // ...logistic function
 
 template <typename Scalar>
-struct logistic {
+struct logistic : public std::unary_function<Scalar,Scalar> {
     inline const Scalar operator()(const Scalar &x) const {
         return ( 1.0/( 1.0 + std::exp(-x) ) ); 
     }
@@ -39,52 +45,53 @@ struct logistic {
 // ...derivative of the logistic function
 
 template <typename Scalar>
-struct dlog {
+struct dlog : public std::unary_function<Scalar,Scalar> {
     inline const Scalar operator()(const Scalar &x) const { 
-        Scalar temp = logistic<Scalar>( x );
-        return ( temp - temp*temp );
+        Scalar y = math::logistic<Scalar>( x );
+        return ( y - y*y );
     }
 };
 
-// ...the standard exponential function as a functor
+// The rectilinear function
 
-template <typename Scalar=float>
-struct fexp {
+template <typename Scalar>
+struct rect_lin : public std::binary_function<Scalar,Scalar,Scalar> {
+    inline const Scalar operator()(const Scalar &x, Scalar b = 0) const {
+        return ( x >= b ? (Scalar) x : (Scalar) 0 );
+    }
+};
+
+
+// Sometimes we need to pass a function pointer, pointing to one of the 
+// standard functions. Instead of doing that, we can define the 
+// standard function as a functor.
+
+// ...standard exponential function as a functor
+
+template <typename Scalar>
+struct fexp :  public std::unary_function<Scalar,Scalar> {
     inline const Scalar operator()(const Scalar &x) const {
         return ( std::exp(x) ); 
     }
 };
 
-template <typename Scalar=float>
-struct flog {
+// ...standard log function as a functor
+
+template <typename Scalar>
+struct flog : public std::unary_function<Scalar,Scalar> {
     inline const Scalar operator()(const Scalar &x) const {
         return ( std::log(x) ); 
     }
 };
 
-template <typename Scalar=float>
-struct invert {
+// ...standard multiplicative inverse as a functor
+
+template <typename Scalar>
+struct invert : public std::unary_function<Scalar,Scalar>  {
     inline const Scalar operator()(const Scalar &x) const {
         return ( 1.0/x ); 
     }
 };
-
-// ...rectilinear function
-
-template <typename Scalar=float>
-struct theta {
-    Scalar b;
-    theta( Scalar b ): b(b){}
-    inline const Scalar operator()(const Scalar &x) const {
-        return ( x > b ? (Scalar) 1 : (Scalar) 0 );
-    }
-};
-inline double rect_lin(const double &b) {return ( b > 0.0 ? b : 0.0 );}
-
-inline float  rect_lin(const float  &b) 
-			    {return  ( b > (float) 0.0 ? b : (float) 0.0 ); }
-
-inline int    rect_lin(const int    &b) {return  ( b > 0 ? b : 0 );}
 
 }  // namespace math
 

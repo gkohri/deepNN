@@ -49,11 +49,11 @@ def build(bld):
             includes = ['.', 'src/main/c++'],
             target="denn", use=['M'])
 
-        srcs2 = bld.path.ant_glob('src/main/c++/**/*.cc',src='true',
-                                 excl='src/main/c++/**/main.cc',bld='true')
-        bld(features='cxx cxxprogram',source=srcs2,
-            includes = ['.', 'src/main/c++'],
-            target="ensemble", use=['M'])
+#        srcs2 = bld.path.ant_glob('src/main/c++/**/*.cc',src='true',
+#                                 excl='src/main/c++/**/main.cc',bld='true')
+#        bld(features='cxx cxxprogram',source=srcs2,
+#            includes = ['.', 'src/main/c++'],
+#            target="ensemble", use=['M'])
 
 #
 # Build a distribution
