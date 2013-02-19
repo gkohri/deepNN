@@ -1,23 +1,26 @@
 
-#ifndef _EXTENED_MATH_H
-#define _EXTENED_MATH_H
+#ifndef _MATH_MATH_H
+#define _MATH_MATH_H
 
 #include <cmath>
 #include <functional>
 
 namespace math {
 
-// Define some non-standard functions of used in statistical physics
+// Define some non-standard functions of use in statistical mechanics
 
 // Some sigmoidal type functions:
 
 // ...the theta function (also called the step function)
 
 template <typename Scalar>
-struct theta : public std::binary_function<Scalar,Scalar,Scalar> {
-    inline const Scalar operator()(const Scalar &x, Scalar b = 0) const {
-        return ( x >= b ? (Scalar) 1 : (Scalar) 0 );
+struct theta : public std::unary_function<Scalar,Scalar> {
+    theta( Scalar b ) : b(b) {}
+    inline const Scalar operator()(const Scalar &x) const {
+        return ( x < b ? (Scalar) 0 : (Scalar) 1 );
     }
+ private:
+    Scalar b;
 };
 
 // ...signum function
@@ -35,12 +38,12 @@ struct signum : public std::binary_function<Scalar,Scalar,Scalar> {
 // ...logistic function
 
 template <typename Scalar>
-struct logistic : public std::unary_function<Scalar,Scalar> {
+class logistic : public std::unary_function<Scalar,Scalar> {
+public:
     inline const Scalar operator()(const Scalar &x) const {
         return ( 1.0/( 1.0 + std::exp(-x) ) ); 
     }
 };
-
 
 // ...derivative of the logistic function
 
@@ -48,14 +51,35 @@ template <typename Scalar>
 struct dlog : public std::unary_function<Scalar,Scalar> {
     inline const Scalar operator()(const Scalar &x) const { 
         Scalar y = math::logistic<Scalar>( x );
-        return ( y - y*y );
+        return ( y*( 1.0 - y) );
     }
 };
+
+// ...Bernoulli 21: p(1-p)
+
+template <typename Scalar>
+struct bern21 : public std::unary_function<Scalar,Scalar> {
+    inline const Scalar operator()(const Scalar &x) const { 
+        return ( x*(1.0 - x ) );
+    }
+};
+
+
+// ...tanh function
+
+template <typename Scalar>
+class tanh : public std::unary_function<Scalar,Scalar> {
+ public:
+    inline const Scalar operator()(const Scalar &x) const {
+        return ( 2.0/( 1.0 + std::exp(-2.0*x) ) - 1.0 ); 
+    }
+};
+
 
 // The rectilinear function
 
 template <typename Scalar>
-struct rect_lin : public std::binary_function<Scalar,Scalar,Scalar> {
+struct relu : public std::binary_function<Scalar,Scalar,Scalar> {
     inline const Scalar operator()(const Scalar &x, Scalar b = 0) const {
         return ( x >= b ? (Scalar) x : (Scalar) 0 );
     }
@@ -96,4 +120,4 @@ struct invert : public std::unary_function<Scalar,Scalar>  {
 }  // namespace math
 
 
-#endif  // _EXTENED_MATH_H
+#endif  // _MATH_MATH_H

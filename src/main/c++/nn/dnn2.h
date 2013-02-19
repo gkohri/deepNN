@@ -1,4 +1,7 @@
 
+#ifndef _NN_DNN2_H
+#define _NN_DNN2_H
+
 #include <cstdio>
 #include <vector>
 
@@ -138,69 +141,30 @@ class DNN2 {
     }
     
     template<typename DerivedA, typename DerivedB>
-    T error( const Eigen::MatrixBase<DerivedA>& inputs,
-             const Eigen::MatrixBase<DerivedB>& targets ) {
+    void forward_prop( const Eigen::MatrixBase<DerivedA>& inputs,
+                      Eigen::MatrixBase<DerivedB>& outputs ) {
 
         Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> hid = w_ih*inputs;
         hid = hid.unaryExpr( math::logistic<T>() );
 
-        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> class_out = w_ho*hid;
+        outputs = w_ho*hid;
 
         Eigen::Matrix<T,1,Eigen::Dynamic> col_max = 
-                                            class_out.colwise().maxCoeff();
-
+                                            outputs.colwise().maxCoeff();
 
         Eigen::Matrix<T,1,Eigen::Dynamic> normalizer =
-           (class_out.rowwise() - col_max).unaryExpr( math::fexp<T>() ).
+           (outputs.rowwise() - col_max).unaryExpr( math::fexp<T>() ).
                                                             colwise().sum();
 
         normalizer = normalizer.unaryExpr( math::flog<T>() ) + col_max;
 
-        class_out.rowwise() -= normalizer;
+        outputs.rowwise() -= normalizer;
 
-        class_out = class_out.unaryExpr( math::fexp<T>() );
-
-        col_max = class_out.colwise().maxCoeff();
-
-        T error = 0;
-        for ( int p = 0; p < targets.cols(); ++p ) {
-            for ( int r = 0; r < targets.rows(); ++r ) {
-                if ( targets(r,p) == 1 ) {
-                    if ( class_out(r,p) < col_max(0,p) ) {
-                        error += 1.0;
-                    }
-                }
-            }
-        }
-
-        error /= static_cast<T>(targets.cols());
-
-        return error;
-    }
-
-    template<typename DerivedA, typename DerivedB>
-    void classify( const Eigen::MatrixBase<DerivedA>& inputs,
-                      Eigen::MatrixBase<DerivedB>& class_probs ) {
-
-        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> hid = w_ih*inputs;
-        hid = hid.unaryExpr( math::logistic<T>() );
-
-        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> class_out = w_ho*hid;
-
-        Eigen::Matrix<T,1,Eigen::Dynamic> col_max = 
-                                            class_out.colwise().maxCoeff();
-
-        Eigen::Matrix<T,1,Eigen::Dynamic> normalizer =
-           (class_out.rowwise() - col_max).unaryExpr( math::fexp<T>() ).
-                                                            colwise().sum();
-
-        normalizer = normalizer.unaryExpr( math::flog<T>() ) + col_max;
-
-        class_out.rowwise() -= normalizer;
-
-        class_probs = class_out.unaryExpr( math::fexp<T>() );
+        outputs = outputs.unaryExpr( math::fexp<T>() );
 
     }
 };
 
 }  // namespace nn
+
+#endif  // _NN_DNN2_H

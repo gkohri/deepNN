@@ -6,6 +6,7 @@
 #include <mutex>
 
 #include <rng/random.h>
+#include <rng/ranmar.h>
 
 
 namespace rng {
@@ -19,17 +20,16 @@ namespace rng {
  */
 class RandomFactory {
  public:
-    /**
-     * The set_seed() method must be called before the first 
-     * call to get_instance(), afterwards it  will have no effect. A second or
-     * subsequent call to set_seed has not effect.
-     */
-    static void set_seed( const unsigned &useed);
 
     /**
-     * Get an instance of the RandomFactory.
+     * Get the instance of the RandomFactory. Note in C++0x, a local static
+     * variable should be created once for each thread. So with the new
+     * standard we do not need to use the Double Check Locking Pattern.
      */
-    static RandomFactory* get_instance();
+    static RandomFactory& get_instance( const unsigned seed = 868051) {
+        static RandomFactory instance(seed);
+        return instance;
+    }
 
     /**
      * Get an new random number generator. The random number generators
@@ -40,13 +40,33 @@ class RandomFactory {
      * by this call.  When the random number generator is no longer needed, it
      * should be explicitly deleted.
      */
-    Random* get_rng();
+    rng::Random& get_rng(){
+        static std::mutex synchronize;
+        synchronize.lock();
+
+        int ij = ijSeeds[currentIJ];
+        int kl = klSeeds[currentKL];
+        rng::Random *rng = new rng::Ranmar(ij, kl);
+
+        if ( ++currentKL == numKLseeds ){
+            currentKL = 0;
+            if ( ++currentIJ == numIJseeds ){
+                // Whether this ever happens in our life time remains to be
+                // seen...
+                fprintf(stderr, 
+                    "RandomFactory: Error: More than 942 million RNGs!");
+                currentIJ = 0;
+            }
+        }
+
+        synchronize.unlock();
+        return *rng;
+    }
+
 
  private:
 
-    static RandomFactory *instance;
-    static unsigned seed;
-
+    const unsigned seed;
     const int numIJseeds;
     const int numKLseeds;
     int currentIJ;
@@ -54,18 +74,56 @@ class RandomFactory {
     int *ijSeeds;
     int *klSeeds;
 
-    static std::mutex synchronize;
+    /**
+     * Constructor
+     */
+    RandomFactory( const unsigned &seed ) : 
+                    seed(seed), numIJseeds(31329), numKLseeds(30082),
+                               currentIJ(0), currentKL(0) {
 
-    RandomFactory();
-    virtual ~RandomFactory();
+        // Generate lists of all possible seeds for Ranmar
 
-    RandomFactory(const RandomFactory&);
-    RandomFactory& operator=(const RandomFactory&);
+        ijSeeds = new int[numIJseeds];
+        klSeeds = new int[numKLseeds];
+
+        for ( int i = 0; i < numIJseeds; ++i ){
+            ijSeeds[i] = i;
+        }
+
+        for ( int i = 0; i < numKLseeds; ++i ){
+            klSeeds[i] = i;
+        }
+
+        // Shuffle the lists using Knuth's in-place shuffle algorithm
+
+        unsigned un = 1103515245*seed + 1013904243;
+
+        for ( int i = numIJseeds-1; i > 0; --i ){
+            un = 1103515245*un + 1013904243;
+            int k = (un >> 17) % i;
+            int temp = ijSeeds[i];
+            ijSeeds[i] = ijSeeds[k];
+            ijSeeds[k] = temp;
+        }
 
 
-    static RandomFactory* create_instance();
-    static void schedule_for_destruction(void (*fun)());
-    static void destroy();
+        for ( int j = numKLseeds-1; j > 0; --j ){
+            un = 1103515245*un + 1013904243;
+            int k = (un >> 17) % j;
+            int temp = klSeeds[j]; 
+            klSeeds[j] = klSeeds[k]; 
+            klSeeds[k] = temp;
+        }
+
+    }
+    ~RandomFactory() {
+        delete[] ijSeeds;
+        delete[] klSeeds;
+    }
+
+    RandomFactory(const RandomFactory&) = delete;
+    RandomFactory& operator=(const RandomFactory&) = delete;
+
 };
 
 }  // namespace rng

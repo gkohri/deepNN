@@ -13,8 +13,7 @@ namespace rng {
 //
 // A class for generating random numbers which are 
 // Normally distributed.  The procedure used is the so-called 
-// "Ziggurant Method" introduced by Marsaglia and Tsang. It makes use of
-// zran for obtaining the initial uniformly, distributed numbers. 
+// "Ziggurant Method" introduced by Marsaglia and Tsang.
 // 
 //    Written by G.A. Kohring
 // 

@@ -1,4 +1,7 @@
 
+#ifndef _NN_DNN3_H
+#define _NN_DNN3_H
+
 #include <cstdio>
 #include <vector>
 
@@ -39,29 +42,47 @@ class DNN3 {
 
     ~DNN3(){}
 
+    int get_num_neuron_layers() {
+        return 4;
+    }
+
+    int get_num_weight_layers() {
+        return 3;
+    }
+
+
     void init( rng::Normal &rand) {
 
         for ( int i = 0; i < size_h1; ++i ) {
-            T norm = static_cast<T>( 1.0/sqrt( static_cast<double>(size_in) ));
+            T norm = static_cast<T>( 
+                                1.0/static_cast<double>(size_in + size_h1) );
             for ( int j = 0; j < size_in; ++j ) {
-                w_ih1(i,j) = norm*rand.next();
+                w_ih1(i,j) = rand.next( 0.0, norm );
             }
         }
 
         for ( int i = 0; i < size_h2; ++i ) {
-            T norm = static_cast<T>( 1.0/sqrt( static_cast<double>(size_h1) ));
+            T norm = static_cast<T>( 
+                            1.0/static_cast<double>(size_h1 + size_h2) );
             for ( int j = 0; j < size_h1; ++j ) {
-                w_h1h2(i,j) = norm*rand.next();
+                w_h1h2(i,j) = rand.next( 0.0, norm );
             }
         }
 
         for ( int i = 0; i < size_out; ++i ) {
-            T norm = static_cast<T>( 1.0/sqrt( static_cast<double>(size_h2) ));
+            T norm = static_cast<T>( 
+                                1.0/static_cast<double>(size_h2 + size_out) );
             for ( int j = 0; j < size_h2; ++j ) {
-                w_h2o(i,j) = norm*rand.next();
+                w_h2o(i,j) = rand.next( 0.0, norm );
             }
         }
 
+        w_ih1_mom.setZero( size_h1, size_in );
+        w_h1h2_mom.setZero( size_h2, size_h1 );
+        w_h2o_mom.setZero( size_out, size_h2 );
+    }
+
+    void reset_mom() {
         w_ih1_mom.setZero( size_h1, size_in );
         w_h1h2_mom.setZero( size_h2, size_h1 );
         w_h2o_mom.setZero( size_out, size_h2 );
@@ -76,27 +97,26 @@ class DNN3 {
     T loss( const Eigen::MatrixBase<DerivedA>& inputs,
                const Eigen::MatrixBase<DerivedB>& targets, T lambda ) {
 
-        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> hid_1 = w_ih1*inputs;
-        hid_1 = hid_1.unaryExpr( math::logistic<T>() );
+        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> outputs = w_ih1*inputs;
 
-        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> hid_2 = w_h1h2*inputs;
-        hid_2 = hid_2.unaryExpr( math::logistic<T>() );
-
-        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> class_in = w_h2o*hid_2;
+        outputs = outputs.unaryExpr( math::logistic<T>() );
+        outputs = w_h1h2*outputs;
+        outputs = outputs.unaryExpr( math::logistic<T>() );
+        outputs = w_h2o*outputs;
 
         Eigen::Matrix<T,1,Eigen::Dynamic> col_max = 
-                                            class_in.colwise().maxCoeff();
+                                            outputs.colwise().maxCoeff();
 
 
         Eigen::Matrix<T,1,Eigen::Dynamic> normalizer =
-           (class_in.rowwise() - col_max).unaryExpr( math::fexp<T>() ).
+           (outputs.rowwise() - col_max).unaryExpr( math::fexp<T>() ).
                                                             colwise().sum();
 
         normalizer = normalizer.unaryExpr( math::flog<T>() ) + col_max;
 
-        class_in.rowwise() -= normalizer;
+        outputs.rowwise() -= normalizer;
 
-        T total_loss = -class_in.cwiseProduct( targets ).sum()/
+        T total_loss = -outputs.cwiseProduct( targets ).sum()/
                                             (static_cast<T>(targets.cols())) +
                        ( w_ih1.squaredNorm()  + 
                          w_h1h2.squaredNorm() +
@@ -109,6 +129,7 @@ class DNN3 {
     // The back-propogation algorithm for a 3-layer network
     template<typename DerivedA, typename DerivedB>
     T back_prop( const T &learning_rate, const T &momentum, const T &lambda,
+                 const T &depth,
                  const Eigen::MatrixBase<DerivedA>& inputs,
                  const Eigen::MatrixBase<DerivedB>& targets ) {
 
@@ -170,49 +191,49 @@ class DNN3 {
     }
     
     template<typename DerivedA, typename DerivedB>
-    T error( const Eigen::MatrixBase<DerivedA>& inputs,
-             const Eigen::MatrixBase<DerivedB>& targets ) {
+    void forward_prop( const Eigen::MatrixBase<DerivedA>& inputs,
+                             Eigen::MatrixBase<DerivedB>& outputs ) {
 
-        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> hid_1 = w_ih1*inputs;
-        hid_1 = hid_1.unaryExpr( math::logistic<T>() );
-
-        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> hid_2 = w_h1h2*hid_1;
-        hid_2 = hid_2.unaryExpr( math::logistic<T>() );
-
-        Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> class_out = w_h2o*hid_2;
+        outputs = w_ih1*inputs;
+        outputs = outputs.unaryExpr( math::logistic<T>() );
+        outputs = w_h1h2*outputs;
+        outputs = outputs.unaryExpr( math::logistic<T>() );
+        outputs = w_h2o*outputs;
 
         Eigen::Matrix<T,1,Eigen::Dynamic> col_max = 
-                                            class_out.colwise().maxCoeff();
+                                            outputs.colwise().maxCoeff();
 
 
         Eigen::Matrix<T,1,Eigen::Dynamic> normalizer =
-           (class_out.rowwise() - col_max).unaryExpr( math::fexp<T>() ).
+           (outputs.rowwise() - col_max).unaryExpr( math::fexp<T>() ).
                                                             colwise().sum();
 
         normalizer = normalizer.unaryExpr( math::flog<T>() ) + col_max;
 
-        class_out.rowwise() -= normalizer;
+        outputs.rowwise() -= normalizer;
 
-        class_out = class_out.unaryExpr( math::fexp<T>() );
+        outputs = outputs.unaryExpr( math::fexp<T>() );
 
-        col_max = class_out.colwise().maxCoeff();
-
-        T error = 0;
-        for ( int p = 0; p < targets.cols(); ++p ) {
-            for ( int r = 0; r < targets.rows(); ++r ) {
-                if ( targets(r,p) == 1 ) {
-                    if ( class_out(r,p) < col_max(0,p) ) {
-                        error += 1.0;
-                    }
-                }
-            }
-        }
-
-        error /= static_cast<T>(targets.cols());
-
-        return error;
     }
+
+    template<typename Derived>
+    double cd1( const size_t w, const float &learning_rate, 
+                const float &momentum, rng::Random &rand,
+                const Eigen::MatrixBase<Derived>& inputs  ) {
+
+        return 0.0;
+    }
+
+    void sample_states( int &w, rng::Random &rand,
+     std::vector<Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>> *inputs,
+     std::vector<Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>> *outputs ){
+
+    }
+
 
 };
 
 }  // namespace nn
+
+#endif  // _NN_DNN3_H
+

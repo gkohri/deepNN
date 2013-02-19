@@ -4,8 +4,11 @@
 #ifndef RNG_RANDOM_H
 #define RNG_RANDOM_H
 
+#include <cstdio>
 #include <algorithm>
 #include <iterator>
+#include <functional>
+#include <omp.h>
 
 namespace rng {
 
@@ -42,6 +45,17 @@ void shuffle ( RandomAccessIterator first, RandomAccessIterator last,
     n = (last-first);
     for (i = n-1; i > 0; --i) std::swap( first[i], first[rand.next_int(i+1)] );
 }
+
+template <typename Scalar = float>
+struct Bernoulli : public std::unary_function<Scalar,Scalar> {
+    Bernoulli( rng::Random &rand ) : rand(&rand) {}
+    inline const Scalar operator()(const Scalar &x) const {
+        return static_cast<Scalar>( x > rand->next() ? 1 : 0 );
+    }
+ private:
+    rng::Random *rand;
+};
+
 
 }  // namespace rng
 

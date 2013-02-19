@@ -40,8 +40,8 @@ class MNIST{
     // Data description
     int   train_label_num[10];
     int   test_label_num[10];
-    float train_label_frac[10];
-    float test_label_frac[10];
+    T train_label_frac[10];
+    T test_label_frac[10];
 
 
  public:
@@ -79,10 +79,13 @@ class MNIST{
      *  for each batch and approximately equal to the percentage in 
      *  the training set as a whole.
      */
-    void get_mini_batches( const int &size_mini_batch, 
+    void get_mini_batches( const int &size_mini_batch, const int &replicas,
         const int &max_num_mini_batch, rng::Random &rand,
         std::vector<Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>> &inputs,
         std::vector<Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>> &outputs ){
+
+        inputs.clear();
+        outputs.clear();
 
         int num_pairs = train_data.cols();
         int train_rows  = train_data.rows();
@@ -101,10 +104,9 @@ class MNIST{
         int count[10];
         for ( int i = 0; i < 10; ++i ) count[i] = 0;
 
-        std::vector<std::vector<int>> inventory;
+        std::vector< std::vector<int> > inventory;
         for ( int i = 0; i < num_mini_batch; ++i ) {
-            std::vector<int> list;
-            inventory.push_back(list);
+            inventory.push_back( std::vector<int>(size_mini_batch) );
         }
 
         for ( int p = 0; p < num_pairs; ++p){
@@ -125,25 +127,53 @@ class MNIST{
             num_mini_batch = max_num_mini_batch;
         }
 
+        for ( int mb = 0; mb < num_mini_batch*replicas; ++mb ) {
+            inputs.push_back(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>());
+            outputs.push_back(Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic>());
+        }
+
         for ( int mb = 0; mb < num_mini_batch; ++mb ) {
 
             int mb_size = inventory[mb].size();
-            Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> input;
-            input.resize( train_rows, mb_size );
-
-            Eigen::Matrix<T,Eigen::Dynamic,Eigen::Dynamic> output;
-            output.resize( label_rows, mb_size );
+            inputs[mb].resize( train_rows, mb_size );
+            outputs[mb].resize( label_rows, mb_size );
 
             for ( int p = 0; p < mb_size; ++p ) {
                 for ( int r = 0; r < train_rows; ++r ) {
-                    input(r,p) = train_data(r, inventory[mb][p] );
+                    inputs[mb](r,p) = train_data(r, inventory[mb][p] );
                 }
                 for ( int r = 0; r < label_rows; ++r ) {
-                    output(r,p) = train_labels(r, inventory[mb][p] );
+                    outputs[mb](r,p) = train_labels(r, inventory[mb][p] );
                 }
             }
-            inputs.push_back( input );
-            outputs.push_back( output );
+
+            for ( int rep = 1; rep < replicas; ++rep ) {
+                int mbr = mb + rep*num_mini_batch;
+                inputs[mbr].resize( train_rows, mb_size );
+                outputs[mbr].resize( label_rows, mb_size );
+
+                for ( int p = 0; p < mb_size; ++p ) {
+                    for ( int i = 0; i < 28; ++i ) {
+                        int inew = i + ( 2*( rand.next()>0.5?1:0 ) - 1 );
+                        for ( int j = 0; j < 28; ++j ) {
+                            int jnew = j + ( 2*( rand.next()>0.5?1:0 ) - 1 );
+                            int r = i*28 + j;
+                            if ( inew > 28 || inew < 0 || 
+                                 jnew > 28 || jnew < 0    ) {
+                                inputs[mbr](r,p) = 0.0;
+                            } else {
+                                int rnew = inew*28 + jnew;
+                                inputs[mbr](r,p) = 
+                                    train_data(rnew, inventory[mb][p]);
+                            }
+                        }
+                    }
+                    for ( int r = 0; r < label_rows; ++r ) {
+                        outputs[mbr](r,p) = train_labels(r, inventory[mb][p] );
+                    }
+                }
+            }
+
         }
 
         delete[] ids;
@@ -237,8 +267,8 @@ class MNIST{
     }
 
 
-    std::vector<float>& get_label_fraction( const int part ) {
-        std::vector<float> *frac = new std::vector<float>;
+    std::vector<T>& get_label_fraction( const int part ) {
+        std::vector<T> *frac = new std::vector<T>;
         if ( part == 0 ) {
             for ( int i = 0; i < 10; ++i ) {
                 frac->push_back( train_label_frac[i] );
@@ -395,15 +425,22 @@ class MNIST{
 
         double num_data_points = ((double) train_data.rows() )*
                                  ((double) train_data.cols() );
+
         double mu    = train_data.mean();
         double sigma = train_data.squaredNorm()/num_data_points - mu*mu;
         double norm = 1.0/sqrt(sigma);
 
-        train_data = (train_data.array() - mu).matrix();
-        train_data = train_data*norm;
+        train_data = norm*(train_data.array() - mu).matrix();
+        test_data  = norm*(test_data.array() - mu).matrix();
 
-        test_data = (test_data.array() - mu).matrix();
-        test_data = test_data*norm;
+/*
+*/
+        double min_val = train_data.minCoeff();
+        double max_val = train_data.maxCoeff();
+        double lin_norm = 1.0/( max_val - min_val );
+
+        train_data = lin_norm*(train_data.array() - min_val).matrix();
+        test_data = lin_norm*(test_data.array() - min_val).matrix();
 
     }
 
