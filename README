@@ -1,0 +1,7 @@
+This is an implementation of deep neural networks aimed at 
+maximal performance.
+
+The code is written in C++.  The back propagation learning is implemented 
+as matrix multiplication using the Eigen library. This is made possible 
+through the so-called mini-batch learning algorithm. Matrix multiplication in
+Eigen runs at near optimal performance on SSE architectures.
