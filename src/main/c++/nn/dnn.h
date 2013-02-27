@@ -61,8 +61,8 @@ class DNN {
             int n_rows = weights[l].rows();
             int n_cols = weights[l].cols();
             double norm = 1.0/static_cast<double>( n_cols + n_rows );
-            for ( int i = 0; i < n_rows; ++i ) {
-                for ( int j = 0; j <  n_cols ; ++j ) {
+            for ( int j = 0; j <  n_cols ; ++j ) {
+                for ( int i = 0; i < n_rows; ++i ) {
                     weights[l](i,j) = rand.next( 0.0, norm );
                     mom[l](i,j) = 0.0;
                     grad[l](i,j) = 0.0;
@@ -77,8 +77,8 @@ class DNN {
             int n_rows = weights[l].rows();
             int n_cols = weights[l].cols();
             float norm = sqrt( 1.0/ static_cast<float>( n_cols + n_rows ) );
-            for ( int i = 0; i < n_rows; ++i ) {
-                for ( int j = 0; j <  n_cols ; ++j ) {
+            for ( int j = 0; j <  n_cols ; ++j ) {
+                for ( int i = 0; i < n_rows; ++i ) {
                     weights[l](i,j) = norm*(1.0 - 2.0*rand.next());
                     mom[l](i,j) = 0.0;
                     grad[l](i,j) = 0.0;
@@ -92,8 +92,8 @@ class DNN {
         for ( size_t l = 0; l < weights.size(); ++l ) {
             int n_rows = weights[l].rows();
             int n_cols = weights[l].cols();
-            for ( int i = 0; i < n_rows; ++i ) {
-                for ( int j = 0; j <  n_cols ; ++j ) {
+            for ( int j = 0; j <  n_cols ; ++j ) {
+                for ( int i = 0; i < n_rows; ++i ) {
                     mom[l](i,j) = 0.0;
                 }
             }

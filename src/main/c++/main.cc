@@ -43,8 +43,8 @@ int main ( int argc, char *argv[] ) {
 //  Begin Configuration Parameters
 
     const int size_in  =  784;
-    const int size_h1  = 1568;
-    const int size_h2  =  784;
+    const int size_h1  =  392;
+    const int size_h2  =    0;
     const int size_h3  =    0;
     const int size_h4  =    0;
     const int size_out =   10;
@@ -53,7 +53,7 @@ int main ( int argc, char *argv[] ) {
     const int size_validation = 1000;
     const float lambda = 0.0e-0;
     const float learning_rate_rbm = 0.05;
-    const float learning_rate_bp = 0.5;
+    const float learning_rate_bp = 0.1;
     const float momentum_rbm = 0.50;
     const float momentum_bp = 0.5;
     const int rbm_epochs = 10;
@@ -61,8 +61,8 @@ int main ( int argc, char *argv[] ) {
     int depth_rbm = -1;
     int depth_bp = -1;
     int replicas = 1;
-    //const int seed = 17439073;
-    const int seed = 508203299;
+    const int seed = 17439073;
+    //const int seed = 508203299;
 
     const string train_data_file   = "data/train-images-idx3-ubyte";
     const string train_labels_file = "data/train-labels-idx1-ubyte";
