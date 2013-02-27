@@ -53,7 +53,7 @@ int main ( int argc, char *argv[] ) {
     const int size_validation = 1000;
     const float lambda = 0.0e-0;
     const float learning_rate_rbm = 0.05;
-    const float learning_rate_bp = 0.1;
+    const float learning_rate_bp = 0.5;
     const float momentum_rbm = 0.50;
     const float momentum_bp = 0.5;
     const int rbm_epochs = 10;
