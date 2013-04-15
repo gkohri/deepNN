@@ -44,18 +44,18 @@ int main ( int argc, char *argv[] ) {
 
     const int size_in  =  784;
     const int size_h1  =  392;
-    const int size_h2  =    0;
-    const int size_h3  =    0;
-    const int size_h4  =    0;
+    const int size_h2  =  392;
+    const int size_h3  =  392;
+    const int size_h4  =  392;
     const int size_out =   10;
     const int size_mini_batch = 100;
     const int max_num_mini_batch = -1;
     const int size_validation = 1000;
     const float lambda = 0.0e-0;
-    const float learning_rate_rbm = 0.05;
-    const float learning_rate_bp = 0.1;
+    const float learning_rate_rbm = 0.010;
+    const float learning_rate_bp = 0.900;
     const float momentum_rbm = 0.50;
-    const float momentum_bp = 0.5;
+    const float momentum_bp = 0.25;
     const int rbm_epochs = 10;
     const int bp_epochs = 20;
     int depth_rbm = -1;
